@@ -32,12 +32,12 @@ import org.w3c.dom.NodeList;
  */
 public class XNode {
 
-  private final Node node;
-  private final String name;
-  private final String body;
-  private final Properties attributes;
-  private final Properties variables;
-  private final XPathParser xpathParser;
+  private final Node node; // mark 被包装的org.w3c.dom.Node对象
+  private final String name; // mark 节点名称
+  private final String body; // mark 节点内容
+  private final Properties attributes; // mark 节点属性集合
+  private final Properties variables; // mark 配置文件中<properties>节点下定义的键值对
+  private final XPathParser xpathParser; // mark 封装了XPath解析器，负责XNode对象的生成，并提供解析XPath表达式的功能
 
   public XNode(XPathParser xpathParser, Node node, Properties variables) {
     this.xpathParser = xpathParser;
@@ -49,9 +49,13 @@ public class XNode {
   }
 
   public XNode newXNode(Node node) {
-    return new XNode(xpathParser, node, variables);
+    return new XNode(xpathParser, node, variables); // mark 根据传入的Node对象，创建XNode对象实例
   }
 
+  /**
+   * 获取父节点
+   * @return 父节点是Element类型，返回封装好的XNode节点，否则返回null
+   */
   public XNode getParent() {
     Node parent = node.getParentNode();
     if (!(parent instanceof Element)) {
@@ -60,19 +64,33 @@ public class XNode {
     return new XNode(xpathParser, parent, variables);
   }
 
+  /**
+   * 获取节点路径
+   * @return 节点的路径值
+   *         比如 <A><B><C><C/><B/><A/>，对于C节点来说节点路径就是 A/B/C
+   */
   public String getPath() {
     StringBuilder builder = new StringBuilder();
-    Node current = node;
+    Node current = node; // mark 当前节点
     while (current instanceof Element) {
       if (current != node) {
         builder.insert(0, "/");
       }
       builder.insert(0, current.getNodeName());
-      current = current.getParentNode();
+      current = current.getParentNode(); // mark 向上追溯节点，直到顶层节点
     }
     return builder.toString();
   }
 
+  /**
+   * 获取节点的识别码
+   * @return 返回唯一标识字符串，如下面的C节点的唯一标识字符串就是 A_B[bid]_C[cid]
+   * @Code <A>
+   *          <B id="bid">
+   *              <C id="cid" value="cvalue"/>
+   *          </B>
+   *      </A>
+   */
   public String getValueBasedIdentifier() {
     StringBuilder builder = new StringBuilder();
     XNode current = this;
@@ -93,6 +111,12 @@ public class XNode {
     }
     return builder.toString();
   }
+
+  /**
+   *  evalXXX()方法，调用XPathParser方法在当前节点下寻找符合表达式条件的节点，通常是文本节点，并
+   *  将值转为为指定的类型，如果值无法转化为指定类型，则会报错。
+   *  【支持数据类型】 String、Boolean、Double、Node、List<Node>
+   */
 
   public String evalString(String expression) {
     return xpathParser.evalString(node, expression);
@@ -121,6 +145,11 @@ public class XNode {
   public String getName() {
     return name;
   }
+
+  /**
+   * getXXXBody()方法：获取文本内容并将其转化为指定的数据类型
+   * 【支持的数据类型】String、Boolean、Integer、Long、Double、Float
+   */
 
   public String getStringBody() {
     return getStringBody(null);
@@ -180,18 +209,7 @@ public class XNode {
   }
 
   /**
-   * Return a attribute value as String.
-   * <p>
-   * If attribute value is absent, return value that provided from supplier of default value.
-   *
-   * @param name
-   *          attribute name
-   * @param defSupplier
-   *          a supplier of default value
-   *
-   * @return the string attribute
-   *
-   * @since 3.5.4
+   * getXxxAttribute()方法：获取节点指定属性的属性值并将其转化为指定的数据类型
    */
   public String getStringAttribute(String name, Supplier<String> defSupplier) {
     String value = attributes.getProperty(name);
@@ -252,6 +270,10 @@ public class XNode {
     return value == null ? def : Float.valueOf(value);
   }
 
+  /**
+   * 获取子节点，对Node.getChildNodes()做相应的封装得到List<XNode>
+   * @return 子节点集合
+   */
   public List<XNode> getChildren() {
     List<XNode> children = new ArrayList<>();
     NodeList nodeList = node.getChildNodes();
@@ -266,6 +288,10 @@ public class XNode {
     return children;
   }
 
+  /**
+   * 获取所有子节点的属性名和属性值
+   * @return 封装好的Properties对象
+   */
   public Properties getChildrenAsProperties() {
     Properties properties = new Properties();
     for (XNode child : getChildren()) {
@@ -325,10 +351,16 @@ public class XNode {
     }
   }
 
+  /**
+   * 解析节点属性键值对，并将其放入Properties对象中
+   * @param n 被解析的节点
+   * @return Properties
+   */
   private Properties parseAttributes(Node n) {
     Properties attributes = new Properties();
-    NamedNodeMap attributeNodes = n.getAttributes();
+    NamedNodeMap attributeNodes = n.getAttributes(); // mark 获取所有包含节点属性的NamedNodeMap对象
     if (attributeNodes != null) {
+      // mark 遍历NamedNodeMap，将属性名和属性值存放在Properties对象中
       for (int i = 0; i < attributeNodes.getLength(); i++) {
         Node attribute = attributeNodes.item(i);
         String value = PropertyParser.parse(attribute.getNodeValue(), variables);
@@ -338,25 +370,32 @@ public class XNode {
     return attributes;
   }
 
+  /**
+   * 解析节点内容
+   * @param node 节点
+   * @return data 返回文本节点内容。如果节点还有子节点，那么返回第一个属于文本节点的子节点的内容。
+   */
   private String parseBody(Node node) {
-    String data = getBodyData(node);
-    if (data == null) {
-      NodeList children = node.getChildNodes();
+    String data = getBodyData(node); // mark 获取节点的文本内容
+    if (data == null) { // mark 如果是非文本节点，说明是有子节点嵌套
+      NodeList children = node.getChildNodes(); // mark 获取该节点下所有子节点
       for (int i = 0; i < children.getLength(); i++) {
         Node child = children.item(i);
-        data = getBodyData(child);
+        data = getBodyData(child); // mark 遍历解析节点的内容
         if (data != null) {
-          break;
-        }
-      }
+          break; // mark 获取到第一个文本子节点的文本内容，结束循环
+        }  // mark 例：<A><B att="val"></B><C>cbody</C><A/>
+      }    // mark 当获取到第二个子节点C的内容`cbody`时会跳出循环并返回
     }
-    return data;
+    return data; // mark 只有文本节点的内容才会返回字符串。比如 <A>aaa</A> => aaa
   }
 
   private String getBodyData(Node child) {
+    // mark 传入节点的类型是CDATA节点或者是文本节点，即只处理文本类型的节点
+    // mark CDATA是未解析字符数据，即不应该由XML解析器解析的文本数据，比如"<"和"&"
     if (child.getNodeType() == Node.CDATA_SECTION_NODE || child.getNodeType() == Node.TEXT_NODE) {
-      String data = ((CharacterData) child).getData();
-      return PropertyParser.parse(data, variables);
+      String data = ((CharacterData) child).getData(); // mark 获取节点中的值。比如 ${database.driver} => database.driver
+      return PropertyParser.parse(data, variables); // mark 返回带占位符的变量的值。比如将 database.driver => com.mysql.cj.jdbc.Driver
     }
     return null;
   }

@@ -27,7 +27,7 @@
   </parent>
 
   <artifactId>mybatis</artifactId>
-  <version>3.5.14-SNAPSHOT</version>
+  <version>3.5.14-MY</version> <!-- 修改MyBatis版本，避免与官方的一致 -->
   <packaging>jar</packaging>
 
   <name>mybatis</name>
