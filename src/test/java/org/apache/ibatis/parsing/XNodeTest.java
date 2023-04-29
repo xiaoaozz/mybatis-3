@@ -13,7 +13,7 @@ enum Font { Aharoni, Aldhabi, Algerian }
 public class XNodeTest {
   public static void main(String[] args) throws Exception {
     // 1. 加载XML文件
-    InputStream inputStream = new BufferedInputStream(new FileInputStream("src/main/java/org/apache/ibatis/parsing/test/XNodeTest.xml"));
+    InputStream inputStream = new BufferedInputStream(new FileInputStream("F:\\SourceCode\\mybatis\\mybatis-3\\src\\test\\resources\\XNodeTest.xml"));
 
     // 2. 生成XPathParser对象
     Properties variables = new Properties();
