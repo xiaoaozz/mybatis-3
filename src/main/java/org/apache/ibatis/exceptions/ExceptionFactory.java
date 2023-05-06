@@ -23,7 +23,7 @@ import org.apache.ibatis.executor.ErrorContext;
 public class ExceptionFactory {
 
   private ExceptionFactory() {
-    // Prevent Instantiation
+    // Prevent Instantiation 阻止实例化
   }
 
   public static RuntimeException wrapException(String message, Exception e) {

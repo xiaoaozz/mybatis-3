@@ -63,7 +63,7 @@ public class SqlSessionFactoryBuilder {
   }
 
   public SqlSessionFactory build(InputStream inputStream) {
-    return build(inputStream, null, null);
+    return build(inputStream, null, null); // 配置文件解析 调用重载方法
   }
 
   public SqlSessionFactory build(InputStream inputStream, String environment) {
@@ -76,8 +76,9 @@ public class SqlSessionFactoryBuilder {
 
   public SqlSessionFactory build(InputStream inputStream, String environment, Properties properties) {
     try {
+      // 配置文件解析 创建文件解析器
       XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, environment, properties);
-      return build(parser.parse());
+      return build(parser.parse()); // 配置文件解析 调用parse方法解析配置文件，生成Configuration对象
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error building SqlSession.", e);
     } finally {
@@ -93,7 +94,7 @@ public class SqlSessionFactoryBuilder {
   }
 
   public SqlSessionFactory build(Configuration config) {
-    return new DefaultSqlSessionFactory(config);
+    return new DefaultSqlSessionFactory(config); // 配置文件解析 创建DefaultSqlSessionFactory
   }
 
 }

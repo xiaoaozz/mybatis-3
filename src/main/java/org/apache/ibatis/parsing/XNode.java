@@ -276,12 +276,12 @@ public class XNode {
    */
   public List<XNode> getChildren() {
     List<XNode> children = new ArrayList<>();
-    NodeList nodeList = node.getChildNodes();
+    NodeList nodeList = node.getChildNodes(); // <properties>标签解析 获取子节点列表
     if (nodeList != null) {
       for (int i = 0, n = nodeList.getLength(); i < n; i++) {
         Node node = nodeList.item(i);
         if (node.getNodeType() == Node.ELEMENT_NODE) {
-          children.add(new XNode(xpathParser, node, variables));
+          children.add(new XNode(xpathParser, node, variables));// <properties>标签解析 将节点对象封装到XNode中，并将XNode对象放入children列表中
         }
       }
     }
@@ -294,11 +294,11 @@ public class XNode {
    */
   public Properties getChildrenAsProperties() {
     Properties properties = new Properties();
-    for (XNode child : getChildren()) {
-      String name = child.getStringAttribute("name");
+    for (XNode child : getChildren()) { // <properties>标签解析 获取并遍历子节点
+      String name = child.getStringAttribute("name"); // <properties>标签解析 获取property节点的name和value属性
       String value = child.getStringAttribute("value");
       if (name != null && value != null) {
-        properties.setProperty(name, value);
+        properties.setProperty(name, value);// <properties>标签解析 设置属性到属性对象中
       }
     }
     return properties;

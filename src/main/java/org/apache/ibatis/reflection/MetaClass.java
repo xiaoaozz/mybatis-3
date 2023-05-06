@@ -36,11 +36,11 @@ public class MetaClass {
 
   private MetaClass(Class<?> type, ReflectorFactory reflectorFactory) {
     this.reflectorFactory = reflectorFactory;
-    this.reflector = reflectorFactory.findForClass(type);
+    this.reflector = reflectorFactory.findForClass(type); // <settings>标签解析 根据类型创建Reflector
   }
 
   public static MetaClass forClass(Class<?> type, ReflectorFactory reflectorFactory) {
-    return new MetaClass(type, reflectorFactory);
+    return new MetaClass(type, reflectorFactory); // <settings>标签解析 调用构造方法
   }
 
   public MetaClass metaClassForProperty(String name) {
@@ -133,13 +133,13 @@ public class MetaClass {
   }
 
   public boolean hasSetter(String name) {
-    PropertyTokenizer prop = new PropertyTokenizer(name);
-    if (!prop.hasNext()) {
-      return reflector.hasSetter(prop.getName());
+    PropertyTokenizer prop = new PropertyTokenizer(name); // <settings>标签解析 属性分词器，用于解析属性名
+    if (!prop.hasNext()) { // <settings>标签解析 hasNext返回true，表明name是一个复合属性
+      return reflector.hasSetter(prop.getName()); // <settings>标签解析 调用reflector方法的hasSetter方法
     }
-    if (reflector.hasSetter(prop.getName())) {
-      MetaClass metaProp = metaClassForProperty(prop.getName());
-      return metaProp.hasSetter(prop.getChildren());
+    if (reflector.hasSetter(prop.getName())) { // <settings>标签解析 调用reflector的hasSetter方法
+      MetaClass metaProp = metaClassForProperty(prop.getName()); // <settings>标签解析 为属性创建MetaClass
+      return metaProp.hasSetter(prop.getChildren());// <settings>标签解析 再次调用hasSetter
     } else {
       return false;
     }
