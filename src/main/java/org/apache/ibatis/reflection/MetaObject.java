@@ -28,7 +28,7 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapper;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
- * 对象描述对象，用于保存指定对象的元数据并提供操作对象元数据的方法。
+ * 对象元数据，或者对象描述对象，用于保存指定对象的元数据并提供操作对象元数据的方法。
  * @author Clinton Begin
  */
 public class MetaObject {
@@ -59,9 +59,18 @@ public class MetaObject {
     }
   }
 
+  /**
+   * 静态的MetaObject的创建方法
+   * @param object
+   * @param objectFactory
+   * @param objectWrapperFactory
+   * @param reflectorFactory
+   * @return
+   */
   public static MetaObject forObject(Object object, ObjectFactory objectFactory,
       ObjectWrapperFactory objectWrapperFactory, ReflectorFactory reflectorFactory) {
     if (object == null) {
+      // object为null，创建默认的SystemMetaObject.NULL_META_OBJECT
       return SystemMetaObject.NULL_META_OBJECT;
     }
     return new MetaObject(object, objectFactory, objectWrapperFactory, reflectorFactory);
@@ -112,11 +121,15 @@ public class MetaObject {
   }
 
   public Object getValue(String name) {
+    // 根据属性表达式创建PropertyTokenizer对象
     PropertyTokenizer prop = new PropertyTokenizer(name);
     if (!prop.hasNext()) {
+      // 没有子表达式，直接获取对象
       return objectWrapper.get(prop);
     }
+    // 有子表达式，根据indexedName创建MetaObject对象
     MetaObject metaValue = metaObjectForProperty(prop.getIndexedName());
+    // 递归判断子表达式children，并且获取值
     if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
       return null;
     } else {

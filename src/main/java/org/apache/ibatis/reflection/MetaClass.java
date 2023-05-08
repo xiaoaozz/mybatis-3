@@ -27,8 +27,7 @@ import org.apache.ibatis.reflection.invoker.MethodInvoker;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
- * 类型描述对象，用于保存类型元数据。
- *
+ * 类的元数据，或者称为类型描述对象，用于保存类型元数据。
  * 通过Reflector和ReflectorFactory的组合使用，实现对复杂的属性表达式的解析。
  * @author Clinton Begin
  */
@@ -42,12 +41,18 @@ public class MetaClass {
     this.reflector = reflectorFactory.findForClass(type); // <settings>标签解析 根据类型创建Reflector
   }
 
+  /**
+   * 静态方法创建MetaClass对象
+   * @param type 指定类
+   * @param reflectorFactory 指定reflectorFactory
+   * @return
+   */
   public static MetaClass forClass(Class<?> type, ReflectorFactory reflectorFactory) {
     return new MetaClass(type, reflectorFactory); // <settings>标签解析 调用构造方法
   }
 
   /**
-   * 创建类的属性对应的MetaClass
+   * 创建类的属性对应的MetaClass对象
    * @param name
    * @return
    */
@@ -133,18 +138,25 @@ public class MetaClass {
   }
 
   /**
-   * getGetterType重载方法
+   * getGetterType重载方法，如果prop右下标且为集合则获取泛型类型
+   *  例如：
+   *      private List<String> list;
+   *      List<String> getList();
+   *
+   *      prop list 返回 java.util.List
+   *      prop list[0] 返回 java.util.String
    * @param prop
    * @return
    */
   private Class<?> getGetterType(PropertyTokenizer prop) {
-    Class<?> type = reflector.getGetterType(prop.getName());
+    Class<?> type = reflector.getGetterType(prop.getName()); // 获取返回类型
     if (prop.getIndex() != null && Collection.class.isAssignableFrom(type)) {
       // 如果有索引，且是Collection接口的子类，比如userList[0]这种形式
       Type returnType = getGenericGetterType(prop.getName()); // 获取集合的泛型类型
       if (returnType instanceof ParameterizedType) {
         Type[] actualTypeArguments = ((ParameterizedType) returnType).getActualTypeArguments();
         if (actualTypeArguments != null && actualTypeArguments.length == 1) {
+          // Collection<T>最多只有一个泛型
           returnType = actualTypeArguments[0];
           if (returnType instanceof Class) {
             type = (Class<?>) returnType;
@@ -164,6 +176,7 @@ public class MetaClass {
    */
   private Type getGenericGetterType(String propertyName) {
     try {
+      // 获取属性名对应的Invoker对象
       Invoker invoker = reflector.getGetInvoker(propertyName);
       if (invoker instanceof MethodInvoker) {
         // 对应属性有getter方法的情况
@@ -193,13 +206,19 @@ public class MetaClass {
    * @return
    */
   public boolean hasSetter(String name) {
-    PropertyTokenizer prop = new PropertyTokenizer(name); // <settings>标签解析 属性分词器，用于解析属性名
-    if (!prop.hasNext()) { // <settings>标签解析 hasNext返回true，表明name是一个复合属性
-      return reflector.hasSetter(prop.getName()); // <settings>标签解析 调用reflector方法的hasSetter方法
+    // <settings>标签解析 解析属性表达式，创建PropertyTokenizer对象
+    PropertyTokenizer prop = new PropertyTokenizer(name);
+    if (!prop.hasNext()) {
+      // <settings>标签解析 hasNext返回true，表明name是一个复合属性，即有子表达式
+      // <settings>标签解析 调用reflector方法的hasSetter方法
+      return reflector.hasSetter(prop.getName());
     }
-    if (reflector.hasSetter(prop.getName())) { // <settings>标签解析 调用reflector的hasSetter方法
-      MetaClass metaProp = metaClassForProperty(prop.getName()); // <settings>标签解析 为属性创建MetaClass
-      return metaProp.hasSetter(prop.getChildren());// <settings>标签解析 再次调用hasSetter
+    if (reflector.hasSetter(prop.getName())) {
+      // <settings>标签解析 父级属性名有set方法
+      // <settings>标签解析 为属性创建MetaClass对象，递归操作
+      MetaClass metaProp = metaClassForProperty(prop.getName());
+      // <settings>标签解析 再次调用hasSetter
+      return metaProp.hasSetter(prop.getChildren());
     } else {
       return false;
     }
@@ -248,8 +267,10 @@ public class MetaClass {
    * @return
    */
   private StringBuilder buildProperty(String name, StringBuilder builder) {
-    PropertyTokenizer prop = new PropertyTokenizer(name); // 创建PropertyTokenizer分词器对象，对属性表达式name进行分词
+    // 解析属性表达式
+    PropertyTokenizer prop = new PropertyTokenizer(name);
     if (prop.hasNext()) {
+      // 如果有子表达式
       String propertyName = reflector.findPropertyName(prop.getName());
       if (propertyName != null) {
         builder.append(propertyName);
@@ -258,6 +279,7 @@ public class MetaClass {
         metaProp.buildProperty(prop.getChildren(), builder); // 递归解析子表达式
       }
     } else {
+      // 没有子表达式，忽略属性名的大小写
       String propertyName = reflector.findPropertyName(name);
       if (propertyName != null) {
         builder.append(propertyName);
