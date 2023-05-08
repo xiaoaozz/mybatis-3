@@ -76,7 +76,7 @@ public class Reflector {
    */
   public Reflector(Class<?> clazz) {
     type = clazz; // 要被反射解析的类
-    addDefaultConstructor(clazz); // 设置默认的构造方法，默认无参，具体实现是通过反射遍历所有的构造方法
+    addDefaultConstructor(clazz); // 设置默认的构造方法，默认无参，并赋值给defaultConstructor，具体实现是通过反射遍历所有的构造方法
     Method[] classMethods = getClassMethods(clazz); // 获取类的所有方法
     // 判断Class是不是record类型
     if (isRecord(type)) {
@@ -84,7 +84,7 @@ public class Reflector {
     } else {
       addGetMethods(classMethods); // 处理所有方法中的get方法，填充getMethods集合和getTypes接口
       addSetMethods(classMethods); // 处理所有方法中的set方法，填充setMethods集合和setTypes接口
-      addFields(clazz); // 处理没有getter和setter方法的字段
+      addFields(clazz); // 解析属性字段，并将解析结果添加到setMethods或getMethods中
     }
     readablePropertyNames = getMethods.keySet().toArray(new String[0]); // 设定可读属性
     writablePropertyNames = setMethods.keySet().toArray(new String[0]); // 设定可写属性
