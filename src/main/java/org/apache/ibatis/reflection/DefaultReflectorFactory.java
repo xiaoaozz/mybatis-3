@@ -37,10 +37,14 @@ public class DefaultReflectorFactory implements ReflectorFactory {
     this.classCacheEnabled = classCacheEnabled;
   }
 
+  /**
+   * 生成Reflector对象
+   * @param type 目标类型
+   * @return 目标类型的Reflector对象
+   */
   @Override
   public Reflector findForClass(Class<?> type) {
-    if (classCacheEnabled) { // classCacheEnabled默认为true
-      // synchronized (type) removed see issue #461
+    if (classCacheEnabled) { // 允许混村，默认为true
       // 从缓存中获取Reflector对象，如果缓存为空，则创建一个新的实例，放入缓存中
       return MapUtil.computeIfAbsent(reflectorMap, type, Reflector::new);
     }

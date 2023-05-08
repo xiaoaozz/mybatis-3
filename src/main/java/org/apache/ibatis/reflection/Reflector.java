@@ -46,6 +46,8 @@ import org.apache.ibatis.reflection.property.PropertyNamer;
 import org.apache.ibatis.util.MapUtil;
 
 /**
+ * Reflector类负责对一个类进行反射解析，并将解析后的结果在属性中存储起来。
+ *
  * This class represents a cached set of class definition information that allows for easy mapping between property
  * names and getter/setter methods.
  * 该类表示一组缓存的类定义信息，允许在属性名和getter/setter方法之间轻松地进行映射。
@@ -56,36 +58,37 @@ public class Reflector {
 
   private static final MethodHandle isRecordMethodHandle = getIsRecordMethodHandle();
   private final Class<?> type; // 对应的class类型
-  private final String[] readablePropertyNames; // 可读属性的名称集合，可读属性就是存在getter方法的属性，初始值为null
-  private final String[] writablePropertyNames; // 可写属性的名称集合，可写属性就是存在setter方法的属性，初始值为null
-  private final Map<String, Invoker> setMethods = new HashMap<>(); // 属性对应的setter方法，key是属性名称，value是Invoker方法
-  private final Map<String, Invoker> getMethods = new HashMap<>(); // 属性对应的getter方法，key是属性名称，value是Invoker方法
-  private final Map<String, Class<?>> setTypes = new HashMap<>(); // setter类型的列表
-  private final Map<String, Class<?>> getTypes = new HashMap<>(); // getter类型的列表
+  private final String[] readablePropertyNames; // 可读属性的名称集合，可读属性就是存在get方法的属性，初始值为null
+  private final String[] writablePropertyNames; // 可写属性的名称集合，可写属性就是存在set方法的属性，初始值为null
+  private final Map<String, Invoker> setMethods = new HashMap<>(); // 属性对应的set方法，key是属性名称，value是对应的set方法
+  private final Map<String, Invoker> getMethods = new HashMap<>(); // 属性对应的get方法，key是属性名称，value是对应的get方法
+  // set方法输入类型。key是属性名，值为对应的该属性的set方法的类型(实际为set方法的第一个参数的类型)
+  private final Map<String, Class<?>> setTypes = new HashMap<>();
+  // get方法输出类型。key是属性名，值为对应的该属性的get方法的类型(实际为get方法的返回值类型)
+  private final Map<String, Class<?>> getTypes = new HashMap<>();
   private Constructor<?> defaultConstructor; // 默认的构造方法
 
   private final Map<String, String> caseInsensitivePropertyMap = new HashMap<>(); // 所有属性名称的集合，key为大写的属性名称，value为属性名称
 
   /**
    * 解析在指定的Class类型，并填充上述的集合的属性，即初始化相关字段
-   * @param clazz
+   * @param clazz 需要被反射处理的目标类
    */
   public Reflector(Class<?> clazz) {
-    type = clazz; // 初始化type字段
+    type = clazz; // 要被反射解析的类
     addDefaultConstructor(clazz); // 设置默认的构造方法，默认无参，具体实现是通过反射遍历所有的构造方法
     Method[] classMethods = getClassMethods(clazz); // 获取类的所有方法
     // 判断Class是不是record类型
     if (isRecord(type)) {
       addRecordGetMethods(classMethods);
     } else {
-      addGetMethods(classMethods); // 处理所有方法中的getter方法，填充getMethods集合和getTypes接口
-      addSetMethods(classMethods); // 处理所有方法中的setter方法，填充setMethods集合和setTypes接口
+      addGetMethods(classMethods); // 处理所有方法中的get方法，填充getMethods集合和getTypes接口
+      addSetMethods(classMethods); // 处理所有方法中的set方法，填充setMethods集合和setTypes接口
       addFields(clazz); // 处理没有getter和setter方法的字段
     }
-    // 初始化为空数组
-    readablePropertyNames = getMethods.keySet().toArray(new String[0]);
-    writablePropertyNames = setMethods.keySet().toArray(new String[0]);
-    // 初始化caseInsensitivePropertyMap集合，其中记录了所有大写格式的属性名称
+    readablePropertyNames = getMethods.keySet().toArray(new String[0]); // 设定可读属性
+    writablePropertyNames = setMethods.keySet().toArray(new String[0]); // 设定可写属性
+    // 将可读或者可写的属性放入大小写无关的属性映射表
     for (String propName : readablePropertyNames) {
       caseInsensitivePropertyMap.put(propName.toUpperCase(Locale.ENGLISH), propName);
     }
@@ -110,12 +113,18 @@ public class Reflector {
         .ifPresent(constructor -> this.defaultConstructor = constructor);
   }
 
+  /**
+   * 找出类中的get方法
+   * @param methods 需要被反射处理的目标类
+   */
   private void addGetMethods(Method[] methods) {
+    // 存储属性的get方法。Map的key为属性名，value为get方法列表。某个属性的get方法用列表存储是因为前期可能会为某一个属性找到多个可能的get方法。
     Map<String, List<Method>> conflictingGetters = new HashMap<>();
     // 使用Java8的stream从所有方法中找出符合以下条件的方法：(1)方法参数长度为0，即无参方法 (2)符合getter方法命名规范（以get开头且方法名长度大于3 或者 以is开头且方法名长度大于2）
     Arrays.stream(methods).filter(m -> m.getParameterTypes().length == 0 && PropertyNamer.isGetter(m.getName()))
         .forEach(m -> addMethodConflict(conflictingGetters, PropertyNamer.methodToProperty(m.getName()), m)); // 记录方法参数类型、返回值等信息
-    resolveGetterConflicts(conflictingGetters); // 处理重复方法名。注意：一个key会有多个method的原因是：当子类覆盖了父类的getter方法并且返回值发生变化时，会产生两个签名不同的方法。
+    // 处理重复方法名。注意：一个key会有多个method的原因是：当子类覆盖了父类的getter方法并且返回值发生变化时，会产生两个签名不同的方法。
+    resolveGetterConflicts(conflictingGetters);
   }
 
   /**
