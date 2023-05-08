@@ -21,10 +21,18 @@ import java.util.Iterator;
  * @author Clinton Begin
  */
 public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
-  private String name;
-  private final String indexedName;
-  private String index;
-  private final String children;
+
+  /**
+   * 例如表达式 "student[sId].name"，解析器的每个字段的值如下：
+   *  name：student
+   *  indexedName： student[sId]
+   *  index：sId
+   *  children：name
+   */
+  private String name; // 当前属性名
+  private final String indexedName; // 表示带索引的属性名，如果当前无索引，则该值和name相同
+  private String index; // 表示索引下标
+  private final String children; // 去除name外的子表达式
 
   public PropertyTokenizer(String fullname) {
     int delim = fullname.indexOf('.');
@@ -59,6 +67,9 @@ public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
     return children;
   }
 
+  /**
+   * hasNext()、next()、remove() 实现自Iterator接口中的方法
+   */
   @Override
   public boolean hasNext() {
     return children != null;
@@ -66,7 +77,7 @@ public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
 
   @Override
   public PropertyTokenizer next() {
-    return new PropertyTokenizer(children);
+    return new PropertyTokenizer(children); // 创建下一个PropertyTokenizer对象
   }
 
   @Override

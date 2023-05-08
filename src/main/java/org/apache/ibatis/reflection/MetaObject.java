@@ -28,23 +28,24 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapper;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
+ * 对象描述对象，用于保存指定对象的元数据并提供操作对象元数据的方法。
  * @author Clinton Begin
  */
 public class MetaObject {
 
-  private final Object originalObject;
-  private final ObjectWrapper objectWrapper;
-  private final ObjectFactory objectFactory;
-  private final ObjectWrapperFactory objectWrapperFactory;
-  private final ReflectorFactory reflectorFactory;
+  private final Object originalObject; // 被包装的对象的原始对象
+  private final ObjectWrapper objectWrapper; // 原始对象的包装器
+  private final ObjectFactory objectFactory; // 实例化对象的工厂
+  private final ObjectWrapperFactory objectWrapperFactory; // 创建对象包装器的工厂
+  private final ReflectorFactory reflectorFactory; // 创建Reflector对象的反射工厂
 
   private MetaObject(Object object, ObjectFactory objectFactory, ObjectWrapperFactory objectWrapperFactory,
       ReflectorFactory reflectorFactory) {
-    this.originalObject = object;
-    this.objectFactory = objectFactory;
-    this.objectWrapperFactory = objectWrapperFactory;
-    this.reflectorFactory = reflectorFactory;
-
+    this.originalObject = object; // 初始化被包装对象的原始对象
+    this.objectFactory = objectFactory; // 初始化实例对象的工厂类
+    this.objectWrapperFactory = objectWrapperFactory; // 初始化创建对象包装器的工厂类
+    this.reflectorFactory = reflectorFactory; // 初始化用于获取类描述对象的工厂类
+    // 为原始对象创建对象包装器
     if (object instanceof ObjectWrapper) {
       this.objectWrapper = (ObjectWrapper) object;
     } else if (objectWrapperFactory.hasWrapperFor(object)) {

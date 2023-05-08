@@ -20,14 +20,14 @@ import java.util.Properties;
 
 /**
  * MyBatis uses an ObjectFactory to create all needed new Objects.
- *
+ * MyBatis使用ObjectFactory来创建所有需要的新对象。
  * @author Clinton Begin
  */
 public interface ObjectFactory {
 
   /**
    * Sets configuration properties.
-   *
+   * 设置工厂的属性。
    * @param properties
    *          configuration properties
    */
@@ -37,28 +37,20 @@ public interface ObjectFactory {
 
   /**
    * Creates a new object with default constructor.
-   *
-   * @param <T>
-   *          the generic type
-   * @param type
-   *          Object type
-   *
+   * 使用默认构造函数（无参构造函数）创建一个新对象
+   * @param <T> the generic type
+   * @param type Object type
    * @return the t
    */
   <T> T create(Class<T> type);
 
   /**
    * Creates a new object with the specified constructor and params.
-   *
-   * @param <T>
-   *          the generic type
-   * @param type
-   *          Object type
-   * @param constructorArgTypes
-   *          Constructor argument types
-   * @param constructorArgs
-   *          Constructor argument values
-   *
+   * 用指定的构造函数和参数创建一个新对象。
+   * @param <T> the generic type
+   * @param type Object type
+   * @param constructorArgTypes Constructor argument types
+   * @param constructorArgs Constructor argument values
    * @return the t
    */
   <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs);
@@ -66,12 +58,9 @@ public interface ObjectFactory {
   /**
    * Returns true if this object can have a set of other objects. It's main purpose is to support
    * non-java.util.Collection objects like Scala collections.
-   *
-   * @param <T>
-   *          the generic type
-   * @param type
-   *          Object type
-   *
+   * 如果此对象可以有一组其它对象，则返回true。它的主要目的是支持非java.util.Collection对象比如Scala集合。
+   * @param <T> the generic type
+   * @param type Object type
    * @return whether it is a collection or not
    *
    * @since 3.1.0

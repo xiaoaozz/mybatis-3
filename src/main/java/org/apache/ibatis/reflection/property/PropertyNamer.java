@@ -25,23 +25,29 @@ import org.apache.ibatis.reflection.ReflectionException;
 public final class PropertyNamer {
 
   private PropertyNamer() {
-    // Prevent Instantiation of Static Class
+    // Prevent Instantiation of Static Class 阻止静态类实例化
   }
 
+  /**
+   * 通过方法名找出对应的属性
+   * @param name 方法名
+   * @return
+   */
   public static String methodToProperty(String name) {
     if (name.startsWith("is")) {
-      name = name.substring(2);
+      name = name.substring(2); // 如果方法名以“is”开头，即boolean类型的属性，则去除“is”
     } else if (name.startsWith("get") || name.startsWith("set")) {
-      name = name.substring(3);
+      name = name.substring(3); // 如果方法名以“get”或者“set”开头，则去除
     } else {
+      // 否则，抛出异常
       throw new ReflectionException(
           "Error parsing property name '" + name + "'.  Didn't start with 'is', 'get' or 'set'.");
     }
 
     if (name.length() == 1 || name.length() > 1 && !Character.isUpperCase(name.charAt(1))) {
+      // 处理get、set方法的驼峰式命名，将首字母改为小写
       name = name.substring(0, 1).toLowerCase(Locale.ENGLISH) + name.substring(1);
     }
-
     return name;
   }
 
@@ -50,10 +56,12 @@ public final class PropertyNamer {
   }
 
   public static boolean isGetter(String name) {
+    // 判断是否是getter方法命名。条件：①以get开头并且字符串长度大于3 ②以is开头并且字符串长度大于2
     return name.startsWith("get") && name.length() > 3 || name.startsWith("is") && name.length() > 2;
   }
 
   public static boolean isSetter(String name) {
+    // 判断是否是setter方法命名。条件：以set开头并且字符串长度大于3
     return name.startsWith("set") && name.length() > 3;
   }
 

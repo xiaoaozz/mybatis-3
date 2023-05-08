@@ -23,25 +23,33 @@ import org.apache.ibatis.reflection.Reflector;
  * @author Clinton Begin
  */
 public class GetFieldInvoker implements Invoker {
-  private final Field field;
+  private final Field field; // 属性对应的Field对象
 
   public GetFieldInvoker(Field field) {
     this.field = field;
   }
 
+  /**
+   * 代理方法，获取目标对象的属性值。
+   * @param target 被代理的目标对象
+   * @param args 方法的参数
+   * @return 方法执行结果
+   * @throws IllegalAccessException
+   */
   @Override
   public Object invoke(Object target, Object[] args) throws IllegalAccessException {
     try {
-      return field.get(target);
+      return field.get(target); // 直接通过反射获取目标属性值
     } catch (IllegalAccessException e) {
       if (Reflector.canControlMemberAccessible()) {
-        field.setAccessible(true);
-        return field.get(target);
+        // 如果无法访问，修改属性的访问属性
+        field.setAccessible(true); // 将属性的可访问性修改为可访问
+        return field.get(target); // 再次通过反射获取目标属性的值
       }
       throw e;
     }
   }
-
+  // 获取属性类型
   @Override
   public Class<?> getType() {
     return field.getType();

@@ -23,29 +23,47 @@ import org.apache.ibatis.reflection.ReflectionException;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
+ * 基础包装器，实现ObjectWrapper接口。
+ * 为子类BeanWrapper和MapWrapper提供公共的方法和属性。
  * @author Clinton Begin
  */
 public abstract class BaseWrapper implements ObjectWrapper {
 
-  protected static final Object[] NO_ARGUMENTS = {};
-  protected final MetaObject metaObject;
+  protected static final Object[] NO_ARGUMENTS = {}; // 无参，主要用于执行get方法所需
+  protected final MetaObject metaObject; // 被包装对象的元数据对象
 
   protected BaseWrapper(MetaObject metaObject) {
     this.metaObject = metaObject;
   }
 
+  /**
+   * 解析对象中的集合名
+   * 根据属性表达式获取对应属性的集合(Array、List、Map)对象，调用MetaObject的getValue()方法获取。
+   * @param prop PropertyTokenizer对象
+   * @param object 指定Object对象
+   * @return
+   */
   protected Object resolveCollection(PropertyTokenizer prop, Object object) {
     if ("".equals(prop.getName())) {
+      // 如果表达式不合法解析不到属性名，则直接返回默认值
       return object;
     }
+    // 解析到属性名，调用metaObject.getValue()方法获取属性值并返回
     return metaObject.getValue(prop.getName());
   }
 
+  /**
+   * 根据属性表达式获取集合(Array、List、Map)的值
+   * @param prop  PropertyTokenizer对象
+   * @param collection 集合(Array、List、Map)
+   * @return 对应下标或key的值
+   */
   protected Object getCollectionValue(PropertyTokenizer prop, Object collection) {
     if (collection instanceof Map) {
-      return ((Map) collection).get(prop.getIndex());
+      return ((Map) collection).get(prop.getIndex()); // 如果是Map类型，则index为key，例如map['key']
     }
     int i = Integer.parseInt(prop.getIndex());
+    // 如果是其他类型，则index为下标，例如list[0]
     if (collection instanceof List) {
       return ((List) collection).get(i);
     } else if (collection instanceof Object[]) {
@@ -67,16 +85,24 @@ public abstract class BaseWrapper implements ObjectWrapper {
     } else if (collection instanceof short[]) {
       return ((short[]) collection)[i];
     } else {
+      // 不是集合类型，则抛出异常
       throw new ReflectionException(
           "The '" + prop.getName() + "' property of " + collection + " is not a List or Array.");
     }
   }
 
+  /**
+   * 根据(参数prop)设置集合(Array、List、Map)的值
+   * @param prop
+   * @param collection
+   * @param value
+   */
   protected void setCollectionValue(PropertyTokenizer prop, Object collection, Object value) {
     if (collection instanceof Map) {
-      ((Map) collection).put(prop.getIndex(), value);
+      ((Map) collection).put(prop.getIndex(), value); // 如果是Map类型，则index为key
     } else {
       int i = Integer.parseInt(prop.getIndex());
+      // 如果是其他类型，则index为下标
       if (collection instanceof List) {
         ((List) collection).set(i, value);
       } else if (collection instanceof Object[]) {
@@ -98,6 +124,7 @@ public abstract class BaseWrapper implements ObjectWrapper {
       } else if (collection instanceof short[]) {
         ((short[]) collection)[i] = (Short) value;
       } else {
+        // 不是集合类型，则抛出异常
         throw new ReflectionException(
             "The '" + prop.getName() + "' property of " + collection + " is not a List or Array.");
       }

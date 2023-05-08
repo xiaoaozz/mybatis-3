@@ -27,12 +27,14 @@ import org.apache.ibatis.reflection.invoker.Invoker;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
+ * 普通对象包装器
+ * 继承BaseWrapper类，基于MetaClass实现Object的属性操作。
  * @author Clinton Begin
  */
 public class BeanWrapper extends BaseWrapper {
 
-  private final Object object;
-  private final MetaClass metaClass;
+  private final Object object; // 被包装的对象
+  private final MetaClass metaClass; // 被包装对象所属类的元类
 
   public BeanWrapper(MetaObject metaObject, Object object) {
     super(metaObject);
@@ -40,21 +42,35 @@ public class BeanWrapper extends BaseWrapper {
     this.metaClass = MetaClass.forClass(object.getClass(), metaObject.getReflectorFactory());
   }
 
+  /**
+   * 获取被包装对象中对应表达式的属性值
+   * @param prop 属性表达式，注意，该表达式不包含子表达式
+   * @return
+   *
+   * 如果表达式形如：`arr[0]/list[0]/map[key]`，则先获取对应属性`arr/list/map`对象的值，再获取索引对应元素的值。
+   * 如果表达式不带索引，则传入的就是个属性名，调用`getBeanProperty`方法，获取属性对应的值。
+   */
   @Override
   public Object get(PropertyTokenizer prop) {
     if (prop.getIndex() != null) {
+      // 若存在索引信息，则表示该属性表达式中的name部分为集合属性
+      // 通过BaseWrapper中的公共方法resolveCollection获取集合对象和集合属性
       Object collection = resolveCollection(prop, object);
       return getCollectionValue(prop, collection);
     }
+    // 不存在索引信息，则name部分为普通对象，查找并调用Invoker相关方法获取属性
     return getBeanProperty(prop, object);
   }
 
   @Override
   public void set(PropertyTokenizer prop, Object value) {
     if (prop.getIndex() != null) {
+      // 若存在索引信息，则表示该属性表达式中的name部分为集合属性
+      // 通过BaseWrapper中的公共方法resolveCollection获取集合对象和集合属性
       Object collection = resolveCollection(prop, object);
       setCollectionValue(prop, collection, value);
     } else {
+      // 不存在索引信息，则name部分为普通对象，查找并调用Invoker相关方法设置属性
       setBeanProperty(prop, object, value);
     }
   }
@@ -76,18 +92,35 @@ public class BeanWrapper extends BaseWrapper {
 
   @Override
   public Class<?> getSetterType(String name) {
-    PropertyTokenizer prop = new PropertyTokenizer(name);
+    PropertyTokenizer prop = new PropertyTokenizer(name); // 解析表达式
     if (!prop.hasNext()) {
+      // 不存在子表达式，直接调用metaClass.getSetterType()方法获取属性类型
+      // 这里之所以是使用metaClass.getSetterType(name)而不是metaValue.getSetterType(name)
+      // 是因为metaValue.getSetterType也是依赖objectWrapper.getSetterType，如果还是调用
+      // metaValue.getSetterType会陷入无限递归，metaClass才是递归的出口
       return metaClass.getSetterType(name);
     }
+    // 创建MetaObject对象
+    // 为什么优先使用MetaObject？而当且仅当封装的对象为空时，才使用MetaClass对象呢？
+    // MetaClass封装的是类的元信息，MetaObject封装的是对象的元信息，可以将类的元信息看成是对象元信息的一个子集。
+    // 根据类元信息得到的一些类型信息可能更加具体。
     MetaObject metaValue = metaObject.metaObjectForProperty(prop.getIndexedName());
     if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
+      // 如果metaValue为SystemMetaObject.NULL_META_OBJECT，表示封装的Java对象值为null
+      // 通过类元信息，获取set方法对应属性类型
       return metaClass.getSetterType(name);
     } else {
+      // 当对象不为空时，通过对象元信息，获取set方法对应属性类型，可以获得更具体的类型信息
+      // 递归判断子表达式的children。然后返回。
       return metaValue.getSetterType(prop.getChildren());
     }
   }
 
+  /**
+   * 获取属性表达式对应的属性的get方法的返回类型
+   * @param name
+   * @return
+   */
   @Override
   public Class<?> getGetterType(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
@@ -102,6 +135,11 @@ public class BeanWrapper extends BaseWrapper {
     }
   }
 
+  /**
+   * 是否存在属性表达式对应的属性的set方法
+   * @param name
+   * @return
+   */
   @Override
   public boolean hasSetter(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
@@ -120,6 +158,11 @@ public class BeanWrapper extends BaseWrapper {
     }
   }
 
+  /**
+   * 是否存在表达式对应的属性的get方法
+   * @param name
+   * @return
+   */
   @Override
   public boolean hasGetter(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
@@ -138,15 +181,23 @@ public class BeanWrapper extends BaseWrapper {
     }
   }
 
+  /**
+   * 为表达式指定的属性创建对应的MetaObject对象
+   * @param name 完整的属性名
+   * @param prop 属性名描述符
+   * @param objectFactory 对象创建工厂
+   * @return
+   */
   @Override
   public MetaObject instantiatePropertyValue(String name, PropertyTokenizer prop, ObjectFactory objectFactory) {
     MetaObject metaValue;
-    Class<?> type = getSetterType(prop.getName());
+    Class<?> type = getSetterType(prop.getName()); // 获取属性表达式指定属性的类型
     try {
-      Object newObject = objectFactory.create(type);
+      Object newObject = objectFactory.create(type); // 创建对应的属性对象
+      // 创建属性对应的MetaObject对象
       metaValue = MetaObject.forObject(newObject, metaObject.getObjectFactory(), metaObject.getObjectWrapperFactory(),
           metaObject.getReflectorFactory());
-      set(prop, newObject);
+      set(prop, newObject); // 为属性所属对象设置对应的属性值
     } catch (Exception e) {
       throw new ReflectionException("Cannot set value of property '" + name + "' because '" + name
           + "' is null and cannot be instantiated on instance of " + type.getName() + ". Cause:" + e.toString(), e);
@@ -156,9 +207,10 @@ public class BeanWrapper extends BaseWrapper {
 
   private Object getBeanProperty(PropertyTokenizer prop, Object object) {
     try {
+      // 得到获取属性对应的Invoker对象
       Invoker method = metaClass.getGetInvoker(prop.getName());
       try {
-        return method.invoke(object, NO_ARGUMENTS);
+        return method.invoke(object, NO_ARGUMENTS); // 通过Invoker封装的反射操作获取属性值
       } catch (Throwable t) {
         throw ExceptionUtil.unwrapThrowable(t);
       }
